@@ -1,12 +1,12 @@
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open('workouts-v2').then(cache => cache.addAll([
-      './',
-      './index.html',
-      './manifest.webmanifest',
-      './icon-192.png',
-      './icon-512.png',
-      './favicon.ico'
+      '/',
+      '/index.html',
+      '/manifest.webmanifest',
+      '/icon-192.png',
+      '/icon-512.png',
+      '/favicon.ico'
     ]))
   );
   self.skipWaiting(); // Заставляет новый SW активироваться сразу
