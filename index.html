@@ -7,15 +7,16 @@
   <link rel="manifest" href="/manifest.json">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Твой CSS без изменений */
     body {
       background: linear-gradient(135deg, #000000 0%, #1a0000 100%);
-      color: #f87171; /* red-400 */
+      color: #f87171;
       font-family: sans-serif;
       overflow-x: hidden;
     }
     .card {
-      background: #111827; /* gray-900 */
-      border: 2px solid #ef4444; /* red-500 */
+      background: #111827;
+      border: 2px solid #ef4444;
       border-radius: 0.75rem;
       padding: 0.5rem;
       box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
@@ -36,10 +37,10 @@
       cursor: pointer;
     }
     .btn:hover {
-      background: #dc2626; /* red-600 */
+      background: #dc2626;
     }
     .input {
-      background: #1f2937; /* gray-800 */
+      background: #1f2937;
       border: 1px solid #ef4444;
       color: #f87171;
       padding: 0.4rem;
@@ -148,7 +149,7 @@
     }
     @media (max-width: 640px) {
       .card {
-        min-height: 100px; /* Компактная высота для 7 дней */
+        min-height: 100px;
       }
       .input-group {
         flex-direction: column;
@@ -461,7 +462,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderWeek();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js');
+        navigator.serviceWorker.register('/sw.js')
+          .then(() => console.log('Service Worker registered'))
+          .catch(err => console.error('Service Worker error:', err));
       }
     });
   </script>
