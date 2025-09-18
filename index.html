@@ -473,6 +473,8 @@
             } else if (reg.active) {
               console.log('Service Worker active');
             }
+            // Force update to ensure latest SW is used
+            reg.update();
           })
           .catch(err => console.error('Service Worker error:', err));
       } else {

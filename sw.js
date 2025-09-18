@@ -1,6 +1,6 @@
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open('workouts-v5').then(cache => {
+    caches.open('workouts-v6').then(cache => {
       console.log('Caching files');
       return cache.addAll([
         './',
@@ -8,7 +8,8 @@ self.addEventListener('install', e => {
         './manifest.webmanifest',
         './icon-192.png',
         './icon-512.png',
-        'https://cdn.tailwindcss.com'
+        'https://cdn.tailwindcss.com',
+        './favicon.ico'
       ]).catch(err => console.error('Cache addAll error:', err));
     })
   );
@@ -17,7 +18,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   console.log('Service Worker activating');
-  const cacheWhitelist = ['workouts-v5'];
+  const cacheWhitelist = ['workouts-v6'];
   e.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
