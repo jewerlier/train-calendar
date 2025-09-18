@@ -3,7 +3,7 @@ self.addEventListener('install', e => {
     caches.open('workouts-v1').then(cache => cache.addAll([
       '/',
       '/index.html',
-      '/manifest.json'
+      '/manifest.webmanifest',
     ]))
   );
 });
