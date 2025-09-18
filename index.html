@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Календарь тренировок</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="/train-calendar/manifest.json">
+  <link rel="icon" href="/train-calendar/icon-192.png" type="image/png">
+  <link rel="favicon" href="/train-calendar/favicon.ico" type="image/x-icon">
+  <style>
+    body {
+      background: linear-gradient(135deg, #000000 0%, #1a0000 100%);
+      color: #f87171; /* red-400 */
+      font-family: sans-serif;
+      overflow-x: hidden;
+    }
+    .card {
+      background: #111827; /* gray-900 */
+      border: 2px solid #ef4444; /* red-500 */
+      border-radius: 1rem;
+      padding: 0.75rem;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(239, 68, 68, 0.3);
+    }
+    .btn {
+      background: #ef4444;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      transition: background 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #dc2626; /* red-600 */
+    }
+    .input {
+      background: #1f2937; /* gray-800 */
+      border: 1px solid #ef4444;
+      color: #f87171;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      width: 100%;
+    }
+    .notes {
+      background: #1f2937;
+      border: 1px solid #ef4444;
+      color: #f87171;
+      resize: vertical;
+      min-height: 3rem;
+      width: 100%;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .workout-item {
+      background: #1f2937;
+      border-left: 4px solid #ef4444;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      cursor: grab;
+    }
+    .workout-text {
+      flex: 1;
+      max-width: calc(100% - 80px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 0.5rem;
+    }
+    .small-day {
+      transform: scale(0.95);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .modal-content {
+      background: #111827;
+      border: 2px solid #ef4444;
+      border-radius: 1rem;
+      padding: 1rem;
+      max-width: 600px;
+      width: 100%;
+      margin: 1rem auto;
+    }
+    .close-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #f87171;
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #ef4444;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    @media (min-width: 768px) {
+      .grid-container {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: repeat(4, auto);
+      }
+      .day-left-1 { grid-row: 1; grid-column: 1; }
+      .day-left-2 { grid-row: 2; grid-column: 1; }
+      .day-left-3 { grid-row: 3; grid-column: 1; }
+      .day-right-1 { grid-row: 1; grid-column: 2; }
+      .day-right-2 { grid-row: 2; grid-column: 2; }
+      .day-right-3 { grid-row: 3; grid-column: 2; }
+      .day-right-4 { grid-row: 4; grid-column: 2; }
+      .small-day { transform: scale(0.9); }
+      .card { padding: 1rem; }
+      .notes { min-height: 4rem; }
+    }
+    @media (max-width: 640px) {
+      .input-group {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .input, select, .btn {
+        min-height: 2.5rem;
+      }
+      .expand-btn {
+        display: block;
+      }
+    }
+    @media (min-width: 641px) {
+      .expand-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4">
+  <h1 class="text-3xl font-bold mb-6 text-red-500 drop-shadow-lg">Календарь тренировок</h1>
+  <div id="calendar" class="grid-container"></div>
+  <div id="modal" class="modal">
+    <div class="modal-content relative">
+      <span class="close-btn">&times;</span>
+      <div id="modal-content-inner"></div>
+    </div>
+  </div>
+
+  <script>
+    const days = [
+      { key: "mon", name: "Понедельник", side: "left", row: 1 },
+      { key: "tue", name: "Вторник", side: "left", row: 2 },
+      { key: "wed", name: "Среда", side: "left", row: 3 },
+      { key: "thu", name: "Четверг", side: "right", row: 1 },
+      { key: "fri", name: "Пятница", side: "right", row: 2 },
+      { key: "sat", name: "Суббота", side: "right", row: 3, small: true },
+      { key: "sun", name: "Воскресенье", side: "right", row: 4, small: true }
+    ];
+
+    const STORAGE_KEY = 'workouts_v12';
+    let store = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+    days.forEach(d => {
+      if (!store[d.key]) store[d.key] = { workouts: [], notes: '' };
+    });
+    saveStore();
+
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function hoursOptions() {
+      let options = '';
+      for (let i = 0; i < 24; i++) {
+        const padded = i.toString().padStart(2, '0');
+        options += `<option value="${padded}">${padded}</option>`;
+      }
+      return options;
+    }
+
+    function minutesOptions() {
+      return ['00', '15', '30', '45'].map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    function createDayCard(day, isModal = false) {
+      const div = document.createElement('div');
+      div.dataset.key = day.key;
+      div.className = `card flex flex-col ${day.small && !isModal ? 'small-day' : ''} ${!isModal ? `day-${day.side}-${day.row}` : ''}`;
+      
+      const workoutsList = store[day.key].workouts.length;
+      div.innerHTML = `
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold border-b-2 border-red-500 pb-1">${day.name}</h2>
+          <div class="flex items-center gap-2">
+            <span class="bg-red-500 text-white px-2 py-1 rounded-full text-sm">${workoutsList}</span>
+            ${!isModal ? '<button class="expand-btn btn text-xs px-2 py-1">↕</button>' : ''}
+          </div>
+        </div>
+        <ul class="flex-1 overflow-y-auto space-y-2 mb-3 pr-1"></ul>
+        <textarea class="notes mb-3" placeholder="Заметки для дня...">${store[day.key].notes}</textarea>
+        <div class="input-group flex gap-2 flex-wrap">
+          <select class="workout-hour input flex-1 min-w-[60px]">${hoursOptions()}</select>
+          <select class="workout-minute input flex-1 min-w-[60px]">${minutesOptions()}</select>
+          <input type="text" class="workout-name flex-1 input min-w-[120px]" placeholder="Имя клиента">
+          <button class="add-btn btn flex-shrink-0 min-w-[80px]">${isModal && document.querySelector(`[data-key="${day.key}"] .add-btn`)?.dataset.mode === 'edit' ? 'Сохранить' : 'Добавить'}</button>
+        </div>
+      `;
+
+      const notesTextarea = div.querySelector('.notes');
+      notesTextarea.addEventListener('input', () => {
+        store[day.key].notes = notesTextarea.value;
+        saveStore();
+        if (isModal) {
+          const mainCard = document.querySelector(`[data-key="${day.key}"]`);
+          if (mainCard) mainCard.querySelector('.notes').value = notesTextarea.value;
+        }
+      });
+
+      return div;
+    }
+
+    function renderWorkoutsForDay(key) {
+      const card = document.querySelector(`[data-key="${key}"]`);
+      const modalCard = document.querySelector(`#modal [data-key="${key}"]`);
+      [card, modalCard].forEach(c => {
+        if (!c) return;
+        const ul = c.querySelector('ul');
+        const countSpan = c.querySelector('span');
+        const workouts = store[key].workouts || [];
+        workouts.sort((a, b) => a.time.localeCompare(b.time));
+        ul.innerHTML = '';
+
+        workouts.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'workout-item';
+          li.draggable = true;
+          li.dataset.id = item.id;
+          li.innerHTML = `
+            <span class="workout-text">${item.time} — ${item.name}</span>
+            <div class="flex gap-1">
+              <button class="edit-btn btn text-xs px-2 py-1">✏️</button>
+              <button class="del-btn btn text-xs px-2 py-1 bg-red-600 hover:bg-red-700">🗑️</button>
+            </div>
+          `;
+          ul.appendChild(li);
+        });
+
+        countSpan.textContent = workouts.length;
+      });
+    }
+
+    function renderWeek() {
+      const calendar = document.getElementById('calendar');
+      if (!calendar) {
+        console.error('Calendar element not found');
+        return;
+      }
+      calendar.innerHTML = '';
+      days.forEach(day => {
+        const card = createDayCard(day);
+        calendar.appendChild(card);
+        renderWorkoutsForDay(day.key);
+      });
+      setupEvents();
+    }
+
+    function openModal(dayKey) {
+      const modal = document.getElementById('modal');
+      const modalContent = document.getElementById('modal-content-inner');
+      const day = days.find(d => d.key === dayKey);
+      if (!day) return;
+
+      modalContent.innerHTML = '';
+      const modalCard = createDayCard(day, true);
+      modalContent.appendChild(modalCard);
+
+      // Синхронизация edit-состояния
+      const mainAddBtn = document.querySelector(`[data-key="${dayKey}"] .add-btn`);
+      if (mainAddBtn?.dataset.mode === 'edit') {
+        modalCard.querySelector('.add-btn').dataset.mode = 'edit';
+        modalCard.querySelector('.add-btn').dataset.editId = mainAddBtn.dataset.editId;
+      }
+
+      modal.style.display = 'block';
+      renderWorkoutsForDay(dayKey);
+      setupEvents();
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.style.display = 'none';
+    }
+
+    let dragData = null;
+
+    function setupEvents() {
+      // Drag & Drop
+      document.querySelectorAll('.workout-item').forEach(item => {
+        item.draggable = true;
+        item.addEventListener('dragstart', e => {
+          dragData = { fromKey: item.closest('[data-key]').dataset.key, id: item.dataset.id };
+          item.style.opacity = '0.5';
+        });
+        item.addEventListener('dragend', e => {
+          item.style.opacity = '1';
+        });
+      });
+
+      document.querySelectorAll('ul').forEach(ul => {
+        ul.addEventListener('dragover', e => e.preventDefault());
+        ul.addEventListener('drop', e => {
+          e.preventDefault();
+          if (!dragData) return;
+          const toKey = ul.closest('[data-key]').dataset.key;
+          const { fromKey, id } = dragData;
+          if (fromKey === toKey) return;
+          const fromWorkouts = store[fromKey].workouts || [];
+          const idx = fromWorkouts.findIndex(x => x.id === id);
+          if (idx > -1) {
+            const [movedItem] = fromWorkouts.splice(idx, 1);
+            (store[toKey].workouts || (store[toKey].workouts = [])).push(movedItem);
+            saveStore();
+            renderWorkoutsForDay(fromKey);
+            renderWorkoutsForDay(toKey);
+          }
+          dragData = null;
+        });
+      });
+
+      // Add/Edit
+      document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const card = btn.closest('[data-key]');
+          const key = card.dataset.key;
+          const hh = card.querySelector('.workout-hour').value;
+          const mm = card.querySelector('.workout-minute').value;
+          const name = card.querySelector('.workout-name').value.trim();
+          if (!name) {
+            alert('Введите имя клиента!');
+            return;
+          }
+          const mode = btn.dataset.mode || 'add';
+          const time = `${hh}:${mm.padStart(2, '0')}`;
+          const workouts = store[key].workouts || [];
+          if (mode === 'add') {
+            const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            workouts.push({ id, time, name });
+          } else {
+            const editId = btn.dataset.editId;
+            const idx = workouts.findIndex(x => x.id === editId);
+            if (idx > -1) {
+              workouts[idx].time = time;
+              workouts[idx].name = name;
+            }
+            btn.dataset.mode = 'add';
+            delete btn.dataset.editId;
+            btn.textContent = 'Добавить';
+            // Синхронизация кнопки в модалке и основном календаре
+            const otherBtn = document.querySelector(`[data-key="${key}"] .add-btn:not([data-edit-id="${editId}"])`);
+            if (otherBtn) {
+              otherBtn.dataset.mode = 'add';
+              delete otherBtn.dataset.editId;
+              otherBtn.textContent = 'Добавить';
+            }
+          }
+          store[key].workouts = workouts;
+          saveStore();
+          renderWorkoutsForDay(key);
+          card.querySelector('.workout-name').value = '';
+          card.querySelector('.workout-hour').value = '09';
+          card.querySelector('.workout-minute').value = '00';
+        });
+      });
+
+      // Edit
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const li = btn.closest('.workout-item');
+          const key = li.closest('[data-key]').dataset.key;
+          const id = li.dataset.id;
+          const item = (store[key].workouts || []).find(x => x.id === id);
+          if (!item) return;
+          const card = li.closest('[data-key]');
+          card.querySelector('.workout-hour').value = item.time.split(':')[0];
+          card.querySelector('.workout-minute').value = item.time.split(':')[1];
+          card.querySelector('.workout-name').value = item.name;
+          const addBtn = card.querySelector('.add-btn');
+          addBtn.dataset.mode = 'edit';
+          addBtn.dataset.editId = id;
+          addBtn.textContent = 'Сохранить';
+          // Синхронизация с модалкой
+          const modalCard = document.querySelector(`#modal [data-key="${key}"]`);
+          if (modalCard) {
+            modalCard.querySelector('.add-btn').dataset.mode = 'edit';
+            modalCard.querySelector('.add-btn').dataset.editId = id;
+            modalCard.querySelector('.add-btn').textContent = 'Сохранить';
+            modalCard.querySelector('.workout-hour').value = item.time.split(':')[0];
+            modalCard.querySelector('.workout-minute').value = item.time.split(':')[1];
+            modalCard.querySelector('.workout-name').value = item.name;
+          }
+        });
+      });
+
+      // Delete
+      document.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('Удалить тренировку?')) return;
+          const li = btn.closest('.workout-item');
+          const key = li.closest('[data-key]').dataset.key;
+          const id = li.dataset.id;
+          store[key].workouts = (store[key].workouts || []).filter(x => x.id !== id);
+          saveStore();
+          renderWorkoutsForDay(key);
+        });
+      });
+
+      // Expand (mobile only)
+      document.querySelectorAll('.expand-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.closest('[data-key]').dataset.key;
+          openModal(key);
+        });
+      });
+
+      // Close modal
+      document.querySelectorAll('.close-btn').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', renderWeek);
+
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
+  </script>
+</body>
+</html>
