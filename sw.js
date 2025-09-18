@@ -1,34 +1,52 @@
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open('workouts-v2').then(cache => cache.addAll([
-      '/',
-      '/index.html',
-      '/manifest.webmanifest',
-      '/icon-192.png',
-      '/icon-512.png',
-      '/favicon.ico'
-    ]))
+    caches.open('workouts-v5').then(cache => {
+      console.log('Caching files');
+      return cache.addAll([
+        './',
+        './index.html',
+        './manifest.webmanifest',
+        './icon-192.png',
+        './icon-512.png',
+        'https://cdn.tailwindcss.com'
+      ]).catch(err => console.error('Cache addAll error:', err));
+    })
   );
-  self.skipWaiting(); // Заставляет новый SW активироваться сразу
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  const cacheWhitelist = ['workouts-v2'];
+  console.log('Service Worker activating');
+  const cacheWhitelist = ['workouts-v5'];
   e.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (!cacheWhitelist.includes(cacheName)) {
-            return caches.delete(cacheName); // Удаляет старые кэши
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Активирует SW для всех клиентов
+    }).then(() => {
+      console.log('Service Worker claiming clients');
+      return self.clients.claim();
+    })
   );
 });
 
 self.addEventListener('fetch', e => {
+  console.log('Fetch:', e.request.url);
   e.respondWith(
-    caches.match(e.request).then(response => response || fetch(e.request))
+    caches.match(e.request).then(response => {
+      if (response) {
+        console.log('Serving from cache:', e.request.url);
+        return response;
+      }
+      return fetch(e.request).catch(err => {
+        console.error('Fetch error:', err);
+        return caches.match('./index.html');
+      });
+    })
   );
 });

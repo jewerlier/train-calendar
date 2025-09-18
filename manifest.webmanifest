@@ -1,7 +1,7 @@
 {
   "name": "Календарь тренировок",
-  "short_name": "Календарь",
-  "start_url": "/",
+  "short_name": "Тренировки",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#ef4444",
